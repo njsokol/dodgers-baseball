@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { bobKid, makeKidMesh, setKidHovered, setKidSelected } from "./kidMesh";
 import { clampToPolygon, type Point } from "../world/bounds";
-import { PLAYER_RADIUS, type BaseId, type PositionId } from "../world/fieldLayout";
+import { BASES, PLAYER_RADIUS, type BaseId, type PositionId } from "../world/fieldLayout";
 
 export class Player {
   readonly id: string;
@@ -9,6 +9,7 @@ export class Player {
   readonly team: "home" | "away";
   positionId?: PositionId;
   isRunner = false;
+  isBatter = false;
   hasBall = false;
   chaseBall = false;
   covering?: BaseId;
@@ -29,17 +30,20 @@ export class Player {
     z: number;
     positionId?: PositionId;
     isRunner?: boolean;
+    isBatter?: boolean;
     speed?: number;
   }) {
     this.id = opts.id;
     this.team = opts.team;
     this.positionId = opts.positionId;
     this.isRunner = opts.isRunner ?? false;
+    this.isBatter = opts.isBatter ?? false;
     this.speed = opts.speed ?? (this.isRunner ? 16 : 24);
     this.mesh = makeKidMesh({
       label: opts.label,
       team: opts.team,
       catchRing: !this.isRunner,
+      isBatter: this.isBatter,
     });
     this.mesh.position.set(opts.x, 0, opts.z);
     this.mesh.userData.playerId = opts.id;
@@ -67,6 +71,12 @@ export class Player {
     }
   }
 
+  faceBase(base: BaseId | null | undefined) {
+    if (!base) return;
+    const bag = BASES[base];
+    this.lookAt(bag.x, bag.z);
+  }
+
   step(dt: number, fence: Point[], ballXZ?: Point) {
     let goal = this.target;
     if (this.chaseBall && ballXZ) {
@@ -87,6 +97,9 @@ export class Player {
         this.mesh.position.z += (dz / dist) * step;
         this.lookAt(goal.x, goal.z);
       }
+    }
+    if (!moving && this.isRunner && this.runnerDest && this.onBase) {
+      this.faceBase(this.runnerDest);
     }
     const clamped = clampToPolygon(this.xz, fence, PLAYER_RADIUS + 0.4);
     this.mesh.position.x = clamped.x;

@@ -17,6 +17,15 @@ export function forceBases(occupied: Set<BaseId>, batterOut = false): Set<BaseId
   return forces;
 }
 
+/** The batter always runs; existing runners move only when the occupied bases force them. */
+export function shouldAdvanceRunner(
+  occupied: Set<BaseId>,
+  destination: BaseId,
+  isCurrentBatter = false,
+): boolean {
+  return isCurrentBatter || forceBases(occupied).has(destination);
+}
+
 export function isFair(x: number, z: number): boolean {
   if (z > 2) return false;
   const along = -z;

@@ -42,10 +42,12 @@ function makeFace(head: THREE.Group) {
 function makeBadge(label: string, y: number) {
   const wrap = new THREE.Group();
   wrap.name = "badge";
+  if (typeof document === "undefined") return wrap;
   const canvas = document.createElement("canvas");
   canvas.width = 64;
   canvas.height = 64;
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return wrap;
   ctx.clearRect(0, 0, 64, 64);
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 36px sans-serif";
@@ -74,12 +76,13 @@ export function makeKidMesh(opts: {
   label: string;
   team: "home" | "away";
   catchRing?: boolean;
+  isBatter?: boolean;
 }): THREE.Group {
   const home = opts.team === "home";
-  const jersey = lambert(home ? 0x1e6fd9 : 0xf47a20);
+  const jersey = lambert(home ? 0x1e6fd9 : 0xef3e42);
   const pants = lambert(COLORS.white);
-  const cap = lambert(home ? 0x1a4e9c : 0x1a2744);
-  const brim = lambert(0xf4f4f4);
+  const cap = lambert(home ? 0x1a4e9c : 0xef3e42);
+  const brim = lambert(home ? 0xf4f4f4 : 0x9e1111);
   const skin = lambert(0xffc89a);
   const hair = lambert(0x5a3a28);
   const shoe = lambert(0x1c1c1c);
@@ -135,15 +138,67 @@ export function makeKidMesh(opts: {
   const hairMesh = new THREE.Mesh(faceted(0.74, 1), hair);
   hairMesh.position.set(0, 0.02, -0.12);
   hairMesh.scale.set(1, 0.7, 0.85);
-  const capMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.74, 0.82, 0.46, 8), cap);
-  capMesh.position.y = 0.48;
+  const capMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(home ? 0.74 : 0.8, home ? 0.82 : 0.9, home ? 0.46 : 0.54, home ? 8 : 12),
+    cap,
+  );
+  capMesh.position.y = home ? 0.48 : 0.52;
   capMesh.castShadow = true;
-  const brimMesh = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.08, 0.72), brim);
-  brimMesh.position.set(0, 0.32, 0.5);
+  const brimMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(home ? 0.78 : 0.9, home ? 0.08 : 0.12, home ? 0.72 : 0.78),
+    brim,
+  );
+  brimMesh.position.set(0, home ? 0.32 : 0.28, home ? 0.5 : 0.55);
+  const helmetGuard = home
+    ? null
+    : (() => {
+        const guard = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.16, 0.18), lambert(0xb11414));
+        guard.position.set(0, 0.18, 0.74);
+        guard.castShadow = true;
+        return guard;
+      })();
+  const cheekGuardLeft = home
+    ? null
+    : (() => {
+        const strap = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.42), lambert(0x8a1212));
+        strap.position.set(-0.42, 0.12, 0.58);
+        strap.rotation.z = 0.35;
+        return strap;
+      })();
+  const cheekGuardRight = home
+    ? null
+    : (() => {
+        const strap = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.42), lambert(0x8a1212));
+        strap.position.set(0.42, 0.12, 0.58);
+        strap.rotation.z = -0.35;
+        return strap;
+      })();
   makeFace(head);
-  head.add(hairMesh, skull, capMesh, brimMesh);
+  head.add(
+    hairMesh,
+    skull,
+    capMesh,
+    brimMesh,
+    ...(helmetGuard ? [helmetGuard] : []),
+    ...(cheekGuardLeft ? [cheekGuardLeft] : []),
+    ...(cheekGuardRight ? [cheekGuardRight] : []),
+  );
 
-  body.add(torso, collar, stripe, leg(-0.28), leg(0.28), foot(-0.28), foot(0.28), arm(-0.78, "leftArm"), arm(0.78, "rightArm"), head);
+  const leftArm = arm(-0.78, "leftArm");
+  const rightArm = arm(0.78, "rightArm");
+
+  body.add(
+    torso,
+    collar,
+    stripe,
+    leg(-0.28),
+    leg(0.28),
+    foot(-0.28),
+    foot(0.28),
+    leftArm,
+    rightArm,
+    head,
+  );
 
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(0.85, 16),
@@ -172,7 +227,8 @@ export function makeKidMesh(opts: {
   pick.position.y = 1.3;
   pick.name = "pick";
 
-  g.add(shadow, body, makeBadge(opts.label, 3.85), catchRing, swirl, pick);
+  const badge = opts.label ? makeBadge(opts.label, 3.85) : null;
+  g.add(shadow, body, ...(badge ? [badge] : []), catchRing, swirl, pick);
   g.userData.bob = 0;
   g.scale.setScalar(KID_SCALE);
   return g;
@@ -196,6 +252,10 @@ export function setKidHovered(group: THREE.Group, hovered: boolean) {
   if (mat?.uniforms.uHover) mat.uniforms.uHover.value = hovered ? 1 : 0;
 }
 
+export function triggerBatSwing(group: THREE.Group) {
+  void group;
+}
+
 export function bobKid(group: THREE.Group, moving: boolean, dt: number) {
   const speed = moving ? 14 : 0;
   group.userData.bob = (group.userData.bob as number) + dt * speed;
@@ -205,7 +265,7 @@ export function bobKid(group: THREE.Group, moving: boolean, dt: number) {
   if (body) body.position.y = bounce;
   const left = group.getObjectByName("leftArm");
   const right = group.getObjectByName("rightArm");
-  const swing = moving ? Math.sin(t) * 0.55 : 0;
+  const swing = moving ? Math.sin(t) * 0.18 : 0;
   if (left) left.rotation.x = swing;
   if (right) right.rotation.x = -swing;
 }

@@ -7,7 +7,6 @@ export interface Scenario {
   coachCorrect: string;
   coachPartial: string;
   coachWrong: string;
-  runners: BaseId[];
   hit: {
     kind: "grounder" | "fly" | "liner";
     target: { x: number; z: number };
@@ -48,7 +47,6 @@ function grounderToFirst(
     coachCorrect: "Yes! Throw to first — that's the play with nobody on.",
     coachPartial: "You got the ball. First base is where the out is.",
     coachWrong: "The batter was running to first. Throw it there.",
-    runners: [],
     hit: { kind: "grounder", target, speed, launchAngle: 8 },
     expected: { fieldedBy, throwTo: "1B" },
   };
@@ -121,12 +119,11 @@ export const SCENARIOS: Scenario[] = [
   ),
   {
     id: "force-at-second",
-    name: "Runner on first, grounder to short",
-    coachBefore: "Runner on first. Force play — the easy out is at second.",
+    name: "Grounder to short",
+    coachBefore: "Grounder to short. Field it and work the force at second if there’s a runner there.",
     coachCorrect: "Force at second! Cover the bag and throw it there.",
     coachPartial: "Close — someone needed to cover second AND the ball had to get there.",
-    coachWrong: "With a runner on first, the force is at second, not first.",
-    runners: ["1B"],
+    coachWrong: "A grounder to short usually means second is the key force if the runner is on first.",
     hit: {
       kind: "grounder",
       target: spot("SS"),
@@ -137,12 +134,11 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     id: "runner-first-third-hit",
-    name: "Runner on first, grounder to third",
-    coachBefore: "Runner on first. Third can go to second for the force.",
+    name: "Grounder to third",
+    coachBefore: "Grounder to third. Field it and take the force at second if the bag is occupied.",
     coachCorrect: "Force at second from third. That's the right base.",
     coachPartial: "Someone needed to be at second to take that throw.",
     coachWrong: "Don't chase the batter to first when second is a force.",
-    runners: ["1B"],
     hit: {
       kind: "grounder",
       target: spot("3B", 5),
@@ -152,13 +148,12 @@ export const SCENARIOS: Scenario[] = [
     expected: { fieldedBy: "3B", cover: "2B", throwTo: "2B" },
   },
   {
-    id: "bases-loaded-3b",
-    name: "Bases loaded, grounder to third",
-    coachBefore: "Bases loaded! Step on third, then go to second and first if you can.",
-    coachCorrect: "Force at third. Keep throwing if they're still running.",
-    coachPartial: "You fielded it. With the bags full, third is a force — then around the horn.",
-    coachWrong: "Bases loaded: step on third for the force, then look for more.",
-    runners: ["1B", "2B", "3B"],
+    id: "third-base-grounder",
+    name: "Grounder to third",
+    coachBefore: "Grounder to third. Get the ball and make the force at third or turn it if the traffic is there.",
+    coachCorrect: "Force at third. Keep throwing if the runners are still alive.",
+    coachPartial: "You fielded it. Third is the key bag on this play.",
+    coachWrong: "Third base is the play on a grounder that direction.",
     hit: {
       kind: "grounder",
       target: spot("3B", 5),
@@ -178,11 +173,10 @@ function linerToSecond(id: string, name: string, fieldedBy: "LF" | "CF" | "RF"):
   return {
     id,
     name,
-    coachBefore: `Line drive to ${field}! Runner on first — field it and throw to second.`,
+    coachBefore: `Line drive to ${field}! Get it and look for second if a runner is going.`,
     coachCorrect: "That's the play — hit the cutoff and get it to second.",
     coachPartial: "You got the ball. The runner was going — second is where the throw belongs.",
-    coachWrong: "Line drive to the outfield with a runner on first: throw it to second.",
-    runners: ["1B"],
+    coachWrong: "Line drive to the outfield: second is usually the right throw if a runner is threatening.",
     hit: {
       kind: "liner",
       target: spot(fieldedBy, 8),

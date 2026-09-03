@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { BALL_RADIUS } from "../world/fieldLayout";
 import { BallTrail } from "../shaders/trail";
+import { applyFenceBounce } from "../world/bounds";
 import type { Player } from "./Player";
 
 export type BallMode = "idle" | "pitch" | "inPlay" | "throw" | "held" | "dead";
@@ -94,7 +95,7 @@ export class Ball {
     this.velocity.set(dx / time, 10 / time, dz / time);
   }
 
-  step(dt: number) {
+  step(dt: number, fencePoly?: { x: number; z: number }[]) {
     if (this.mode === "held" && this.holder) {
       const p = this.holder.mesh.position;
       this.mesh.position.set(p.x + 1.4, 5.2, p.z + 0.4);
@@ -128,6 +129,20 @@ export class Ball {
         this.velocity.x *= 0.72;
         this.velocity.z *= 0.72;
         if (Math.abs(this.velocity.y) < 1.2) this.velocity.y = 0;
+      }
+    }
+
+    if (fencePoly) {
+      const bounce = applyFenceBounce(
+        { x: this.mesh.position.x, z: this.mesh.position.z },
+        { x: this.velocity.x, z: this.velocity.z },
+        fencePoly,
+        BALL_RADIUS,
+      );
+      if (bounce.hit) {
+        this.mesh.position.set(bounce.position.x, this.mesh.position.y, bounce.position.z);
+        this.velocity.x = bounce.velocity.x;
+        this.velocity.z = bounce.velocity.z;
       }
     }
 

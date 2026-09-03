@@ -261,6 +261,37 @@ body {
   }
 }
 
+.scoreboard {
+  position: absolute;
+  left: 32px;
+  bottom: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 248, 230, 0.94);
+  color: var(--ink);
+  border: 6px solid var(--ink);
+  border-radius: 18px;
+  padding: 10px 18px;
+  box-shadow: 6px 6px 0 #00000022;
+  z-index: 3;
+}
+
+.scoreboard-label {
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scoreboard-value {
+  min-width: 60px;
+  text-align: right;
+  font-weight: 800;
+  font-size: 42px;
+  line-height: 1;
+}
+
 .paused-pill {
   position: absolute;
   right: 220px;
@@ -405,9 +436,69 @@ body {
   margin: 16px 0;
 }
 
+.fullscreen-btn {
+  width: 100%;
+  min-height: 72px;
+  margin-top: 12px;
+  border: 6px solid var(--ink);
+  border-radius: 999px;
+  background: var(--blue);
+  color: var(--cream);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 28px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #00000022;
+}
+
+.fullscreen-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #00000022;
+}
+
 .settings input[type="range"] {
   width: 100%;
-  height: 44px;
+  height: 34px;
+  margin: 8px 0;
+  cursor: pointer;
+  accent-color: var(--blue);
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.settings input[type="range"]::-webkit-slider-runnable-track {
+  height: 18px;
+  border: 4px solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--yellow) 0%, #f2d77d 100%);
+}
+
+.settings input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 34px;
+  height: 34px;
+  border: 4px solid var(--ink);
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 2px 2px 0 #00000022;
+  margin-top: -10px;
+}
+
+.settings input[type="range"]::-moz-range-track {
+  height: 18px;
+  border: 4px solid var(--ink);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--yellow) 0%, #f2d77d 100%);
+}
+
+.settings input[type="range"]::-moz-range-thumb {
+  width: 34px;
+  height: 34px;
+  border: 4px solid var(--ink);
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 2px 2px 0 #00000022;
 }
 
 .check {

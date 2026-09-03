@@ -67,3 +67,53 @@ export function clampToPolygon(p: Point, poly: Point[], pad = 1.4): Point {
   const len = Math.hypot(vx, vz) || 1;
   return { x: best.x + (vx / len) * pad, z: best.z + (vz / len) * pad };
 }
+
+export function applyFenceBounce(
+  position: Point,
+  velocity: Point,
+  poly: Point[],
+  radius = 1.35,
+): { hit: boolean; position: Point; velocity: Point } {
+  const inside = pointInPolygon(position, poly);
+  if (inside) return { hit: false, position, velocity };
+
+  let best = poly[0];
+  let bestD = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const c = closestOnSegment(position, a, b);
+    const d = (c.x - position.x) ** 2 + (c.z - position.z) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = c;
+    }
+  }
+
+  const center = { x: 0, z: -40 };
+  const inwardX = center.x - best.x;
+  const inwardZ = center.z - best.z;
+  const normalLen = Math.hypot(inwardX, inwardZ) || 1;
+  const nx = inwardX / normalLen;
+  const nz = inwardZ / normalLen;
+  const push = radius + 0.2;
+  const adjusted = {
+    x: best.x + nx * push,
+    z: best.z + nz * push,
+  };
+
+  const dot = velocity.x * nx + velocity.z * nz;
+  const reflected = {
+    x: velocity.x - 2 * dot * nx,
+    z: velocity.z - 2 * dot * nz,
+  };
+
+  return {
+    hit: true,
+    position: adjusted,
+    velocity: {
+      x: reflected.x * 0.55,
+      z: reflected.z * 0.55,
+    },
+  };
+}

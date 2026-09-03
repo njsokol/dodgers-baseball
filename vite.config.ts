@@ -6,6 +6,9 @@ export default defineConfig({
     port: 5173,
     host: true,
   },
+  test: {
+    environment: "jsdom",
+  },
   build: {
     sourcemap: true,
     assetsInlineLimit: 0,

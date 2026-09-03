@@ -25,7 +25,16 @@ import {
   type PositionId,
 } from "../world/fieldLayout";
 import { defaultEnabledIds, pickRandomScenario, type Scenario } from "../sim/scenarios";
-import { covering, forceBases, holderAtBase, isFair, type PlayGrade } from "../sim/rules";
+import {
+  covering,
+  forceBases,
+  holderAtBase,
+  isFair,
+  shouldAdvanceRunner,
+  type PlayGrade,
+} from "../sim/rules";
+import { shouldClearSelection } from "./selection";
+import { awardScore, SCORE_VALUES } from "../sim/scoring";
 
 const POSITIONS = Object.keys(FIELDER_SPOTS) as PositionId[];
 const FIXED_DT = 1 / 60;
@@ -58,6 +67,7 @@ export class Game {
   private playClock = 0;
   private hitAt = 0;
   private pitchT = 0;
+  private batterSwung = false;
   private resolveAt = 0;
   private bounced = false;
   private caughtFly = false;
@@ -68,8 +78,10 @@ export class Game {
   private throwBase: BaseId | null = null;
   private outAt: BaseId | undefined;
   private outs: BaseId[] = [];
+  private score = 0;
   /** Bases occupied at the start of the current play (for force / cover). */
   private occupancy = new Set<BaseId>();
+  private nextRunnerId = 1;
   private running = false;
   private audio: AudioContext | null = null;
 
@@ -128,6 +140,7 @@ export class Game {
         else this.enabled.delete(id);
       },
     });
+    this.hud.setScore(this.score);
     this.hud.setCoach("Hit Play. Move your fielders — they won't go by themselves!");
 
     new Input(
@@ -218,10 +231,15 @@ export class Game {
     this.outs = [];
     this.playClock = 0;
     this.hitAt = 0;
+    this.batterSwung = false;
     this.scenario = scenario;
-    this.placeRunners(this.scenario.runners);
     this.occupancy = this.liveOccupied();
-    this.batter = this.spawnRunner("batter", DUGOUT_AWAY_EXIT.x, DUGOUT_AWAY_EXIT.z, "1B");
+    this.batter = this.spawnRunner(
+      `batter-${this.nextRunnerId++}`,
+      DUGOUT_AWAY_EXIT.x,
+      DUGOUT_AWAY_EXIT.z,
+      "1B",
+    );
     this.batter.speed = 11;
     this.batter.target = new THREE.Vector3(BATTER_BOX.x, 0, BATTER_BOX.z);
     this.ball.release();
@@ -253,25 +271,16 @@ export class Game {
     const r = new Player({
       id,
       team: "away",
-      label: "R",
+      label: "",
       x,
       z,
       isRunner: true,
+      isBatter: true,
     });
     r.runnerDest = dest;
     this.runners.push(r);
     this.scene.add(r.mesh);
     return r;
-  }
-
-  private placeRunners(bases: BaseId[]) {
-    for (const b of bases) {
-      if (b === "home") continue;
-      if (this.runners.some((r) => r.onBase === b && r.mesh.visible)) continue;
-      const p = BASES[b];
-      const r = this.spawnRunner(`run-${b}`, p.x, p.z, NEXT_BASE[b]);
-      r.onBase = b;
-    }
   }
 
   private liveOccupied(): Set<BaseId> {
@@ -298,8 +307,6 @@ export class Game {
         continue;
       }
       if (r.reachedBase && r.runnerDest && r.runnerDest !== "home") bag = r.runnerDest;
-      else if (r.target && r.runnerDest && r.runnerDest !== "home") bag = r.runnerDest;
-      else if (!bag && (r.id === "batter" || r.runnerDest === "1B")) bag = "1B";
       if (!bag || bag === "home" || taken.has(bag)) {
         this.scene.remove(r.mesh);
         continue;
@@ -330,8 +337,12 @@ export class Game {
         this.throwToFielder(p);
         return;
       }
-      if (this.selected === p) this.select(null);
-      else this.select(p);
+      if (this.selected !== p) this.select(p);
+      return;
+    }
+
+    if (shouldClearSelection(this.selected?.id ?? null, target)) {
+      this.select(null);
       return;
     }
     if (!this.selected) return;
@@ -425,6 +436,7 @@ export class Game {
     this.throwBase = p.covering ?? this.nearestBase(dest.x, dest.z, 24);
     this.noteThrow(this.throwBase);
     this.selected.chaseBall = false;
+    this.awardScore("throw");
     this.beep(620, 0.07);
   }
 
@@ -436,6 +448,7 @@ export class Game {
       this.throwBase = id;
       this.noteThrow(id);
       this.selected.chaseBall = false;
+      this.awardScore("throw");
       this.beep(620, 0.07);
     } else {
       this.selected.chaseBall = false;
@@ -478,7 +491,7 @@ export class Game {
 
   private step(dt: number) {
     this.playClock += dt;
-    this.ball.step(dt);
+    this.ball.step(dt, this.stadium.fencePoly);
     const ballXZ = this.ball.xz;
     for (const f of this.fielders) f.step(dt, this.stadium.fencePoly, ballXZ);
     for (const r of this.runners) r.step(dt * this.timeScale, this.stadium.fencePoly);
@@ -555,28 +568,27 @@ export class Game {
 
   private sendRunners() {
     const occupied = this.occupancy;
-    const forces = forceBases(occupied);
     for (const r of this.runners) {
       if (!r.runnerDest) continue;
       const dest = r.runnerDest;
-      if (r.id === "batter" || forces.has(dest) || occupied.has(this.prevBase(dest))) {
+      if (shouldAdvanceRunner(occupied, dest, r === this.batter)) {
         const bag = BASES[dest];
         r.target = new THREE.Vector3(bag.x, 0, bag.z);
+        r.faceBase(dest);
       }
     }
-  }
-
-  private prevBase(b: BaseId): BaseId {
-    if (b === "1B") return "home";
-    if (b === "2B") return "1B";
-    if (b === "3B") return "2B";
-    return "3B";
   }
 
   private stepPlay() {
     if (this.ball.mode === "inPlay" && this.ball.mesh.position.y <= BALL_RADIUS + 0.2) this.bounced = true;
 
     this.updateCoverAi();
+    if (this.batter && !this.batterSwung && this.ball.mode === "inPlay") {
+      const dToHome = Math.hypot(this.ball.xz.x - HOME.x, this.ball.xz.z - HOME.z);
+      if (dToHome < 8) {
+        this.batterSwung = true;
+      }
+    }
     this.tryCatchOrPickup();
     this.tryCompleteThrow();
     this.advanceRunners();
@@ -619,6 +631,7 @@ export class Game {
         this.select(f);
         this.fieldedBy = f.positionId;
         this.fieldedAt = this.playClock;
+        this.awardScore("pickup");
         if (airCatch && this.scenario?.hit.kind === "fly") {
           this.caughtFly = true;
           this.recordOut("home", this.batter);
@@ -669,6 +682,7 @@ export class Game {
           r.mesh.visible = false;
         } else if (r.runnerDest) {
           r.onBase = r.runnerDest;
+          r.faceBase(r.runnerDest);
         }
         if (!r.called) {
           r.called = true;
@@ -681,7 +695,7 @@ export class Game {
 
   private batterIsOut(): boolean {
     if (this.caughtFly) return true;
-    const batter = this.runners.find((r) => r.id === "batter");
+    const batter = this.batter;
     return Boolean(batter && batter.called && batter.mesh.visible === false);
   }
 
@@ -803,6 +817,11 @@ export class Game {
     this.outs.push(base);
   }
 
+  private awardScore(event: keyof typeof SCORE_VALUES) {
+    this.score = awardScore(this.score, event);
+    this.hud.setScore(this.score);
+  }
+
   private recordOut(base: BaseId | undefined, runner?: Player | null) {
     if (runner) {
       if (runner.called && runner.mesh.visible === false) return;
@@ -811,7 +830,11 @@ export class Game {
       runner.target = null;
       runner.reachedBase = true;
     }
+    const beforeOuts = this.outs.length;
     this.noteOut(base);
+    this.awardScore("out");
+    if (this.outs.length >= 2 && beforeOuts === 1) this.awardScore("doublePlay");
+    if (this.outs.length >= 3 && beforeOuts === 2) this.awardScore("triplePlay");
     if (this.outs.length >= 3) this.hud.showCall("triple");
     else if (this.outs.length >= 2) this.hud.showCall("double");
     else this.hud.showCall("out");
@@ -840,7 +863,12 @@ export class Game {
 
   private syncFx() {
     this.diamond.tick(this.elapsed);
-    for (const p of this.fielders) faceCamera(p.mesh, this.rig.camera);
+    for (const f of this.fielders) {
+      if ((!f.target && !f.chaseBall && !f.hasBall && (this.phase === "idle" || this.phase === "pitching")) || this.phase === "resolving") {
+        f.lookAt(HOME.x, HOME.z);
+      }
+      faceCamera(f.mesh, this.rig.camera);
+    }
     for (const p of this.runners) faceCamera(p.mesh, this.rig.camera);
     const mats: THREE.ShaderMaterial[] = [];
     const pushMat = (obj: THREE.Object3D | undefined) => {

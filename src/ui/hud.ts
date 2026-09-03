@@ -13,9 +13,10 @@ export interface HudHandlers {
 export class Hud {
   private playBtn: HTMLButtonElement;
   private gearBtn: HTMLButtonElement;
+  private fullscreenBtn: HTMLButtonElement;
   private panel: HTMLElement;
+  private scoreEl: HTMLElement;
   private coachEl: HTMLElement;
-  private selectedEl: HTMLElement;
   private pausedEl: HTMLElement;
   private playIcon: HTMLElement;
   private callEl: HTMLElement;
@@ -29,8 +30,11 @@ export class Hud {
     private readonly handlers: HudHandlers,
   ) {
     root.innerHTML = `
+      <div class="scoreboard" aria-live="polite">
+        <span class="scoreboard-label">Score</span>
+        <span class="scoreboard-value" id="score">0</span>
+      </div>
       <div class="coach" id="coach"></div>
-      <div class="selected-tag" id="selected" hidden></div>
       <div class="paused-pill" id="paused" hidden>PAUSED</div>
       <div class="call-stamp" id="call" hidden><span id="call-text"></span></div>
       <div class="dock interactive">
@@ -57,6 +61,7 @@ export class Hud {
           </label>
           <label class="check"><input id="hints" type="checkbox" checked /> Coach glow hints</label>
           <label class="check"><input id="mute" type="checkbox" /> Mute</label>
+          <button id="fullscreen" type="button" class="fullscreen-btn">Enter full screen</button>
         </div>
         <div class="tab-scenarios" hidden>
           <p class="hint">Play picks at random from what's on. Next walks through the list.</p>
@@ -70,20 +75,30 @@ export class Hud {
 
     this.playBtn = root.querySelector("#play")!;
     this.gearBtn = root.querySelector("#gear")!;
+    this.fullscreenBtn = root.querySelector("#fullscreen")!;
     this.panel = root.querySelector("#settings")!;
+    this.scoreEl = root.querySelector("#score")!;
     this.coachEl = root.querySelector("#coach")!;
-    this.selectedEl = root.querySelector("#selected")!;
     this.pausedEl = root.querySelector("#paused")!;
     this.playIcon = root.querySelector("#play-icon")!;
     this.callEl = root.querySelector("#call")!;
     this.callText = root.querySelector("#call-text")!;
 
     this.setPlayIcon("play");
+    this.setScore(0);
+    this.syncFullscreenState();
     this.playBtn.addEventListener("click", () => this.handlers.onTogglePlay());
     root.querySelector("#next")!.addEventListener("click", () => this.handlers.onNext());
     this.gearBtn.addEventListener("click", () => {
       this.setSettingsOpen(!this.settingsOpen);
     });
+    this.fullscreenBtn.addEventListener("click", () => {
+      void this.toggleFullscreen();
+    });
+    document.addEventListener("fullscreenchange", () => this.syncFullscreenState());
+    document.addEventListener("webkitfullscreenchange", () => this.syncFullscreenState());
+    document.addEventListener("mozfullscreenchange", () => this.syncFullscreenState());
+    document.addEventListener("MSFullscreenChange", () => this.syncFullscreenState());
     document.addEventListener(
       "pointerdown",
       (e) => {
@@ -131,6 +146,59 @@ export class Hud {
     }
   }
 
+  private async toggleFullscreen() {
+    const rootEl = document.documentElement as HTMLElement & {
+      requestFullscreen?: () => Promise<void>;
+      webkitRequestFullscreen?: () => Promise<void>;
+      msRequestFullscreen?: () => Promise<void>;
+      mozRequestFullScreen?: () => Promise<void>;
+    };
+    const doc = document as Document & {
+      fullscreenElement?: Element | null;
+      webkitFullscreenElement?: Element | null;
+      mozFullScreenElement?: Element | null;
+      exitFullscreen?: () => Promise<void>;
+      webkitExitFullscreen?: () => Promise<void>;
+      msExitFullscreen?: () => Promise<void>;
+      mozCancelFullScreen?: () => Promise<void>;
+    };
+
+    const isActive =
+      !!doc.fullscreenElement ||
+      !!doc.webkitFullscreenElement ||
+      !!doc.mozFullScreenElement;
+
+    try {
+      if (isActive) {
+        const exit =
+          doc.exitFullscreen ??
+          doc.webkitExitFullscreen ??
+          doc.msExitFullscreen ??
+          doc.mozCancelFullScreen;
+        if (exit) await exit.call(document);
+        return;
+      }
+
+      const request =
+        rootEl.requestFullscreen ??
+        rootEl.webkitRequestFullscreen ??
+        rootEl.msRequestFullscreen ??
+        rootEl.mozRequestFullScreen;
+      if (request) await request.call(rootEl);
+    } catch {
+      // Browsers will only allow fullscreen after a user gesture. This is expected.
+    }
+  }
+
+  private syncFullscreenState() {
+    const isActive =
+      !!document.fullscreenElement ||
+      !!(document as Document & { webkitFullscreenElement?: Element | null }).webkitFullscreenElement ||
+      !!(document as Document & { mozFullScreenElement?: Element | null }).mozFullScreenElement;
+    this.fullscreenBtn.textContent = isActive ? "Exit full screen" : "Enter full screen";
+    this.fullscreenBtn.setAttribute("aria-pressed", String(isActive));
+  }
+
   private setSettingsOpen(on: boolean) {
     this.settingsOpen = on;
     this.panel.hidden = !on;
@@ -149,14 +217,17 @@ export class Hud {
     });
   }
 
+  setScore(value: number) {
+    this.scoreEl.textContent = String(value);
+  }
+
   setCoach(text: string | null) {
     this.coachEl.textContent = text ?? "";
     this.coachEl.classList.toggle("show", Boolean(text));
   }
 
-  setSelected(label: string | null) {
-    this.selectedEl.hidden = !label;
-    this.selectedEl.textContent = label ? `Sending: ${label}` : "";
+  setSelected(_label: string | null) {
+    // Intentionally no-op: selection state is visualized by the player glow, not a HUD label.
   }
 
   setPaused(on: boolean) {
