@@ -1,0 +1,11 @@
+Model Information:
+* title:	Mario Superstar Baseball - Mario Stadium
+* source:	https://sketchfab.com/3d-models/mario-superstar-baseball-mario-stadium-aeae02b3bba94a7493cf4ce8c40ca8c5
+* author:	Axton.Denman (https://sketchfab.com/Axton.Denman)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Mario Superstar Baseball - Mario Stadium" (https://sketchfab.com/3d-models/mario-superstar-baseball-mario-stadium-aeae02b3bba94a7493cf4ce8c40ca8c5) by Axton.Denman (https://sketchfab.com/Axton.Denman) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

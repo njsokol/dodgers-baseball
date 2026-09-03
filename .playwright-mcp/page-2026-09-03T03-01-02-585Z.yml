@@ -1,0 +1,7 @@
+- generic [ref=f12e2]:
+  - generic:
+    - generic: Runner on first. Force play — the easy out is at second.
+    - generic: Neighborhood park · original field
+    - generic [ref=f12e4]:
+      - button "Pause" [ref=f12e11] [cursor=pointer]
+      - button "Settings" [ref=f12e9] [cursor=pointer]

@@ -1,0 +1,7 @@
+- generic [ref=f19e2]:
+  - generic:
+    - generic: Hit Play. Move your fielders — they won't go by themselves!
+    - generic: Neighborhood park · original field
+    - generic [ref=f19e4]:
+      - button "Play" [ref=f19e5] [cursor=pointer]
+      - button "Settings" [ref=f19e9] [cursor=pointer]

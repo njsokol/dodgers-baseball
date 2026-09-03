@@ -1,0 +1,7 @@
+- generic [ref=f22e2]:
+  - generic:
+    - generic: If it comes back to the mound, stay with it and go to first.
+    - generic: Neighborhood park · original field
+    - generic [ref=f22e4]:
+      - button "Pause" [active] [ref=f22e11] [cursor=pointer]
+      - button "Settings" [ref=f22e9] [cursor=pointer]

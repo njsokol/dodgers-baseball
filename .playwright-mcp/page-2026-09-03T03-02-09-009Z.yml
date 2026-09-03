@@ -1,0 +1,7 @@
+- generic [ref=f17e2]:
+  - generic:
+    - generic: Charged at third. Look the batter to first.
+    - generic: Neighborhood park · original field
+    - generic [ref=f17e4]:
+      - button "Pause" [active] [ref=f17e11] [cursor=pointer]
+      - button "Settings" [ref=f17e9] [cursor=pointer]

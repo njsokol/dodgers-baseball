@@ -1,0 +1,7 @@
+- generic [ref=e2]:
+  - generic:
+    - generic: Hit to the right side. Second base has a play at first.
+    - generic: "Field: “Baseball Field” by Tiko (CC-BY 4.0)"
+    - generic [ref=e4]:
+      - button "Pause" [active] [ref=e11] [cursor=pointer]
+      - button "Settings" [ref=e9] [cursor=pointer]
