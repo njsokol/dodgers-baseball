@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { asset } from "../assets/url";
 import { HOME, SECOND } from "./fieldLayout";
 
 const TARGET_HOME_TO_SECOND = Math.hypot(SECOND.x - HOME.x, SECOND.z - HOME.z);
@@ -23,7 +24,7 @@ function xzCorners(box: THREE.Box3): THREE.Vector3[] {
 
 export async function loadTikoField(): Promise<THREE.Group> {
   const loader = new GLTFLoader();
-  const gltf = await loader.loadAsync("/models/baseball-field/scene.gltf");
+  const gltf = await loader.loadAsync(asset("models/baseball-field/scene.gltf"));
   const model = gltf.scene;
   model.traverse((obj) => {
     if (obj instanceof THREE.Mesh) {

@@ -2,12 +2,18 @@ import { BASES, type BaseId } from "../world/fieldLayout";
 import type { Player } from "../entities/Player";
 import type { Ball } from "../entities/Ball";
 
-export function forceBases(occupied: Set<BaseId>): Set<BaseId> {
+/**
+ * Bases where a runner can be put out by the ball at the bag (no tag).
+ * If the batter-runner is out, first is open and every force is off —
+ * trailing runners must be tagged.
+ */
+export function forceBases(occupied: Set<BaseId>, batterOut = false): Set<BaseId> {
   const forces = new Set<BaseId>();
+  if (batterOut) return forces;
+  forces.add("1B");
   if (occupied.has("1B")) forces.add("2B");
   if (occupied.has("1B") && occupied.has("2B")) forces.add("3B");
   if (occupied.has("1B") && occupied.has("2B") && occupied.has("3B")) forces.add("home");
-  forces.add("1B");
   return forces;
 }
 

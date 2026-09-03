@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { asset } from "./url";
 
 const loader = new THREE.TextureLoader();
 
@@ -20,12 +21,12 @@ function once(url: string): THREE.Texture {
 }
 
 export const maps = {
-  grass: repeating("/textures/grass.jpg", 48),
-  dirt: repeating("/textures/dirt.jpg", 10),
-  wood: repeating("/textures/wood.jpg", 4),
-  sky: once("/textures/sky.jpg"),
-  stands: once("/textures/stadium-stands.jpg"),
-  wall: once("/textures/outfield-wall.jpg"),
+  grass: repeating(asset("textures/grass.jpg"), 48),
+  dirt: repeating(asset("textures/dirt.jpg"), 10),
+  wood: repeating(asset("textures/wood.jpg"), 4),
+  sky: once(asset("textures/sky.jpg")),
+  stands: once(asset("textures/stadium-stands.jpg")),
+  wall: once(asset("textures/outfield-wall.jpg")),
 };
 
 export function dirtMaterial(): THREE.MeshLambertMaterial {

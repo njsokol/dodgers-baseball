@@ -25,7 +25,7 @@ export class Hud {
   private tab: "game" | "scenarios" | "credits" = "game";
 
   constructor(
-    private readonly root: HTMLElement,
+    root: HTMLElement,
     private readonly handlers: HudHandlers,
   ) {
     root.innerHTML = `
@@ -169,11 +169,18 @@ export class Hud {
     this.callEl.className = "call-stamp";
   }
 
-  showCall(kind: "safe" | "out") {
+  showCall(kind: "safe" | "out" | "double" | "triple") {
     window.clearTimeout(this.callTimer);
     this.callEl.hidden = false;
     this.callEl.className = `call-stamp show ${kind}`;
-    this.callText.textContent = kind === "out" ? "OUT!" : "SAFE!";
+    this.callText.textContent =
+      kind === "triple"
+        ? "TRIPLE PLAY!"
+        : kind === "double"
+          ? "DOUBLE PLAY!"
+          : kind === "out"
+            ? "OUT!"
+            : "SAFE!";
     this.callTimer = window.setTimeout(() => {
       this.callEl.classList.add("fade");
       this.callTimer = window.setTimeout(() => {

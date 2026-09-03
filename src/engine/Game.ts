@@ -386,19 +386,8 @@ export class Game {
     else p.target = null;
   }
 
-  /** Someone already on the way to this bag, or standing on it. */
-  private coverFor(base: BaseId): Player | undefined {
-    const bag = BASES[base];
-    const assigned = this.fielders.filter((f) => !this.aiBusy(f) && f.covering === base);
-    const ss = assigned.find((f) => f.positionId === "SS");
-    if (ss) return ss;
-    if (assigned[0]) return assigned[0];
-    return this.fielders.find((f) => !this.aiBusy(f) && !f.chaseBall && f.distTo(bag) < 5);
-  }
-
   private updateCoverAi() {
     if (this.phase !== "ballInPlay") return;
-    const fielding = this.fielders.filter((f) => f.chaseBall || f.hasBall);
     const first = this.fielderByPos("1B");
     const firstOffBag = first && (first.chaseBall || (first.hasBall && first.distTo(BASES["1B"]) > 10));
     if (firstOffBag) {
@@ -412,17 +401,15 @@ export class Game {
     const occupied = this.occupancy;
     const needSecond = occupied.has("1B") || this.scenario?.expected.throwTo === "2B";
     if (needSecond) {
-      const keeper = this.coverFor("2B");
-      if (keeper) {
-        for (const f of this.fielders) {
-          if (f !== keeper && f.covering === "2B") this.releaseCover(f);
-        }
+      const leftHit = this.ball.xz.x < 0;
+      const ss = this.fielderByPos("SS");
+      const two = this.fielderByPos("2B");
+      if (leftHit) {
+        if (ss && ss.covering === "2B") this.releaseCover(ss);
+        this.sendCover("2B", "2B");
       } else {
-        const leftSide = fielding.some(
-          (f) => f.positionId === "SS" || f.positionId === "3B" || f.positionId === "LF",
-        );
-        if (leftSide) this.sendCover("2B", "2B");
-        else this.sendCover("SS", "2B");
+        if (two && two.covering === "2B") this.releaseCover(two);
+        this.sendCover("SS", "2B");
       }
     }
 
@@ -634,13 +621,7 @@ export class Game {
         this.fieldedAt = this.playClock;
         if (airCatch && this.scenario?.hit.kind === "fly") {
           this.caughtFly = true;
-          this.noteOut("home");
-          if (this.batter) {
-            this.batter.target = null;
-            this.batter.mesh.visible = false;
-            this.batter.called = true;
-          }
-          this.hud.showCall("out");
+          this.recordOut("home", this.batter);
           this.beep(880, 0.1);
         } else {
           this.beep(520, 0.06);
@@ -698,38 +679,34 @@ export class Game {
     }
   }
 
+  private batterIsOut(): boolean {
+    if (this.caughtFly) return true;
+    const batter = this.runners.find((r) => r.id === "batter");
+    return Boolean(batter && batter.called && batter.mesh.visible === false);
+  }
+
+  /** Off the bag they legally occupy (or, for the batter, off home). */
+  private runnerOffBag(r: Player): boolean {
+    if (r.reachedBase || r.mesh.visible === false || r.scored) return false;
+    if (r.onBase) return r.distTo(BASES[r.onBase]) > 3.2;
+    return true;
+  }
+
   private tryForceAndTag() {
     if (this.ball.mode !== "held" || !this.ball.holder) return;
-    const occupied = this.occupancy;
-    const forces = forceBases(occupied);
+    const forces = forceBases(this.occupancy, this.batterIsOut());
     for (const r of this.runners) {
-      if (r.reachedBase || !r.runnerDest) continue;
+      if (r.reachedBase || !r.runnerDest || r.mesh.visible === false) continue;
       const dest = r.runnerDest;
       if (!forces.has(dest)) continue;
       if (holderAtBase(this.ball, dest, 5.5)) {
-        this.noteOut(dest);
-        r.target = null;
-        r.mesh.visible = false;
-        r.reachedBase = true;
-        if (!r.called) {
-          r.called = true;
-          this.hud.showCall("out");
-        }
-        this.beep(240, 0.14);
+        this.recordOut(dest, r);
       }
     }
     for (const r of this.runners) {
-      if (r.reachedBase || r.mesh.visible === false) continue;
-      if (this.ball.holder.distTo(r.xz) < 2.8 && r.target) {
-        this.noteOut(r.runnerDest);
-        r.mesh.visible = false;
-        r.target = null;
-        r.reachedBase = true;
-        if (!r.called) {
-          r.called = true;
-          this.hud.showCall("out");
-        }
-        this.beep(240, 0.14);
+      if (!this.runnerOffBag(r)) continue;
+      if (this.ball.holder.distTo(r.xz) < 2.8) {
+        this.recordOut(r.runnerDest, r);
       }
     }
   }
@@ -801,9 +778,11 @@ export class Game {
     }
     const line =
       grade === "correct"
-        ? this.outs.length >= 2
-          ? "Double play! You got the force and kept going — that's baseball."
-          : this.scenario.coachCorrect
+        ? this.outs.length >= 3
+          ? "Triple play! Around the horn — that's as good as it gets."
+          : this.outs.length >= 2
+            ? "Double play! You got the force and kept going — that's baseball."
+            : this.scenario.coachCorrect
         : grade === "partial"
           ? this.scenario.coachPartial
           : this.scenario.coachWrong;
@@ -822,6 +801,21 @@ export class Game {
     if (!base) return;
     this.outAt = base;
     this.outs.push(base);
+  }
+
+  private recordOut(base: BaseId | undefined, runner?: Player | null) {
+    if (runner) {
+      if (runner.called && runner.mesh.visible === false) return;
+      runner.called = true;
+      runner.mesh.visible = false;
+      runner.target = null;
+      runner.reachedBase = true;
+    }
+    this.noteOut(base);
+    if (this.outs.length >= 3) this.hud.showCall("triple");
+    else if (this.outs.length >= 2) this.hud.showCall("double");
+    else this.hud.showCall("out");
+    this.beep(240, 0.14);
   }
 
   private grade(): PlayGrade {

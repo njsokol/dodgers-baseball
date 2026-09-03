@@ -225,6 +225,20 @@ body {
   border-color: #1b8a3e;
 }
 
+.call-stamp.double {
+  color: #c45a12;
+  border-color: #c45a12;
+  font-size: 84px;
+  letter-spacing: 0.04em;
+}
+
+.call-stamp.triple {
+  color: #7b2cbf;
+  border-color: #7b2cbf;
+  font-size: 80px;
+  letter-spacing: 0.04em;
+}
+
 @keyframes call-stamp {
   0% {
     opacity: 0;
