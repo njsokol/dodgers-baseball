@@ -162,6 +162,36 @@ export const SCENARIOS: Scenario[] = [
     },
     expected: { fieldedBy: "3B", throwTo: "3B" },
   },
+  {
+    id: "fly-lcf",
+    name: "Pop fly to left-center gap",
+    coachBefore: "Pop fly to the left-center gap! Call it and get under it before it drops.",
+    coachCorrect: "That’s the catch — call it and take it in the air.",
+    coachPartial: "You got under it. This one had to be caught before it hit the ground.",
+    coachWrong: "That was a deep fly in the left-center gap — call it early before it falls.",
+    hit: {
+      kind: "fly",
+      target: between("LF", "CF"),
+      speed: 58,
+      launchAngle: 52,
+    },
+    expected: { fieldedBy: "CF", catchFly: true },
+  },
+  {
+    id: "fly-rcf",
+    name: "Pop fly to right-center gap",
+    coachBefore: "Pop fly to the right-center gap! Call it and get under it before it drops.",
+    coachCorrect: "That’s the catch — call it and take it in the air.",
+    coachPartial: "You got under it. This one had to be caught before it hit the ground.",
+    coachWrong: "That was a deep fly in the right-center gap — call it early before it falls.",
+    hit: {
+      kind: "fly",
+      target: between("CF", "RF"),
+      speed: 58,
+      launchAngle: 52,
+    },
+    expected: { fieldedBy: "CF", catchFly: true },
+  },
   linerToSecond("ld-lf", "Line drive to left", "LF"),
   linerToSecond("ld-cf", "Line drive to center", "CF"),
   linerToSecond("ld-rf", "Line drive to right", "RF"),
@@ -187,27 +217,12 @@ function linerToSecond(id: string, name: string, fieldedBy: "LF" | "CF" | "RF"):
   };
 }
 
-let bag: string[] = [];
-
-function shuffle(ids: string[]) {
-  for (let i = ids.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
-  }
-}
-
 export function pickRandomScenario(enabled: Set<string>, currentId?: string): Scenario {
   const pool = SCENARIOS.filter((s) => enabled.has(s.id));
   const list = pool.length > 0 ? pool : SCENARIOS;
-  const ids = list.map((s) => s.id);
-  bag = bag.filter((id) => ids.includes(id) && id !== currentId);
-  if (bag.length === 0) {
-    bag = ids.filter((id) => id !== currentId);
-    if (bag.length === 0) bag = ids.slice();
-    shuffle(bag);
-  }
-  const id = bag.shift()!;
-  return list.find((s) => s.id === id) ?? list[0]!;
+  const choices = list.filter((s) => s.id !== currentId);
+  const pick = choices[Math.floor(Math.random() * choices.length)] ?? list[0]!;
+  return pick;
 }
 
 export function defaultEnabledIds(): Set<string> {

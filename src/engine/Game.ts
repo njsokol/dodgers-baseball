@@ -546,6 +546,18 @@ export class Game {
       vx = (x / dist) * horiz;
       vz = (z / dist) * horiz;
       vy = 10;
+    } else if (kind === "fly") {
+      // Ball.step() scales inPlay velocity decay AND position update by flight=0.5, so both
+      // the vertical peak and horizontal reach must account for that factor to land on target.
+      const gravity = 16;
+      const flight = 0.5;
+      const peakHeight = 13; // clears the y>11 infield catch ceiling
+      const vyPeak = Math.sqrt((2 * gravity * peakHeight) / flight);
+      const hangTime = (2 * vyPeak) / gravity;
+      const horiz = dist / (flight * hangTime);
+      vx = (x / dist) * horiz;
+      vz = (z / dist) * horiz;
+      vy = vyPeak;
     } else {
       const ang = (this.scenario.hit.launchAngle * Math.PI) / 180;
       const speed = this.scenario.hit.speed;

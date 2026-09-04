@@ -28,6 +28,13 @@ describe("scenario definitions", () => {
   it("does not inject magical runners into the field", () => {
     expect(SCENARIOS.every((s) => !("runners" in s))).toBe(true);
   });
+
+  it("includes left- and right-center popflies with a true airborne catch expectation", () => {
+    const ids = new Set(SCENARIOS.map((s) => s.id));
+    expect(ids.has("fly-lcf")).toBe(true);
+    expect(ids.has("fly-rcf")).toBe(true);
+    expect(SCENARIOS.some((s) => s.hit.kind === "fly" && s.expected.catchFly === true)).toBe(true);
+  });
 });
 
 describe("selection policy", () => {
